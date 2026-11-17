@@ -1,0 +1,87 @@
+name: backup-panel
+
+x-app: &app
+  build:
+    context: ./docker/app
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  image: backup-panel-app
+  volumes:
+    - .:/var/www/html
+    - ${DESKTOP_DIR:-/tmp/desktop}:/mnt/desktop
+  environment:
+    DB_CONNECTION: mysql
+    DB_HOST: db
+    DB_PORT: 3306
+    DB_DATABASE: backup_panel
+    DB_USERNAME: backup
+    DB_PASSWORD: backup
+    PHP_CLI_SERVER_WORKERS: 4   # встроенный dev-сервер по умолчанию однопоточный; в продакшене нужен nginx + php-fpm
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    command: php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+    ports:
+      - "127.0.0.1:8080:8000"
+
+  queue:
+    <<: *app
+    command: php artisan queue:work --sleep=3 --timeout=0 --max-time=3600 --memory=384
+    restart: unless-stopped
+    deploy:
+      replicas: ${QUEUE_WORKERS:-3}   # параллельных бэкапов (на одном сервере-источнике всегда не больше одного)
+
+  scheduler:
+    <<: *app
+    command: php artisan schedule:work
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: backup_panel
+      MYSQL_USER: backup
+      MYSQL_PASSWORD: backup
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # --- тестовое окружение (замена реальных S3 / серверов / Windows) ---
+
+  s3mock:
+    image: adobe/s3mock
+    environment:
+      COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS: backups
+    ports:
+      - "127.0.0.1:9090:9090"
+    profiles: ["test"]
+
+  test-source:
+    build: ./docker/test-source
+    hostname: test-source
+    ports:
+      - "127.0.0.1:2201:22"
+    profiles: ["test"]
+
+  test-win:
+    build: ./docker/test-win
+    hostname: test-win
+    ports:
+      - "127.0.0.1:2202:22"
+    volumes:
+      - win-data:/data
+    profiles: ["test"]
+
+volumes:
+  db-data:
+  win-data:
