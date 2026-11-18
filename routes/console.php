@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('backup:reap')->everyMinute()->withoutOverlapping();
+Schedule::command('projects:sync-due')->everyMinute()->withoutOverlapping();

@@ -22,8 +22,15 @@ class SshExecutor
     /** Процесс для удалённой команды (не запущен). stdout можно читать потоково. */
     public function process(string $remoteCommand, ?float $timeout = null): Process
     {
+        return new Process($this->argv($remoteCommand), null, ['SSHPASS' => $this->server->password], null, $timeout);
+    }
+
+    /** Аргументы команды `sshpass -e ssh ...` (пароль передаётся отдельно, через переменную SSHPASS). */
+    public function argv(string $remoteCommand): array
+    {
         $s = $this->server;
-        $cmd = [
+
+        return [
             'sshpass', '-e', 'ssh',
             '-p', (string) $s->port,
             '-o', 'PreferredAuthentications=password,keyboard-interactive',
@@ -38,8 +45,6 @@ class SshExecutor
             $s->username.'@'.$s->host,
             $remoteCommand,
         ];
-
-        return new Process($cmd, null, ['SSHPASS' => $s->password], null, $timeout);
     }
 
     /** Выполнить команду и вернуть результат. */
