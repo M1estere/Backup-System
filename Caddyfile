@@ -6,7 +6,12 @@ http://:80 {
 	redir https://{host}{uri} permanent
 }
 https://{$PANEL_HOST} {
-	tls internal
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
 	encode zstd gzip
 	@static path /css/* /js/* /fonts/*
 	header @static Cache-Control "public, max-age=2592000, immutable"
