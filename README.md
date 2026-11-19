@@ -263,3 +263,24 @@ docker compose run --rm -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: app php 
 - `StreamTee`: буфер на получателя (`backup.tee_buffer_mb`), отключение получателя при 10 минутах без приёма данных.
 - Неполный набор файлов запуска всегда удаляется (ошибка источника — со всех хранилищ, сбой хранилища — с него).
 - Пока нет: расписание (schedule), ретенция/prune, уборка осиротевших файлов, уведомления, режим `archive`, скачивание. См. раздел 14 в README.
+
+## Развёртывание на боевом сервере
+
+Файлы `docker-compose.prod.yml`, `Caddyfile`, `opcache.ini` лежат в репозитории; секреты (`.env`, `.env.compose`) — только на сервере и в git не попадают.
+
+1. Docker + compose, клонировать репозиторий в `/opt/backup-panel`.
+2. База: на хосте (MariaDB/MySQL), пользователь `backup` с доступом из сети Docker (`172.16.0.0/12`); контейнеры подключаются к `host.docker.internal`.
+3. `.env` — из `.env.example` (`APP_ENV=production`, `APP_DEBUG=false`, `APP_URL`, `DB_HOST=host.docker.internal`, `DB_PASSWORD`, `APP_KEY`); `.env.compose` — одна строка `DB_PASSWORD=...`.
+4. `Caddyfile`: заменить IP на свой домен (Let's Encrypt выпустится сам) или оставить IP (самоподписанный сертификат).
+5. Запуск:
+   ```bash
+   C="docker compose --env-file .env.compose -f docker-compose.yml -f docker-compose.prod.yml"
+   $C build app
+   $C run --rm --no-deps app composer install --no-dev --optimize-autoloader
+   $C run --rm --no-deps app php artisan key:generate --force   # только для нового APP_KEY
+   $C run --rm --no-deps app php artisan migrate --force
+   $C run --rm --no-deps app php artisan filament:assets
+   $C up -d app queue scheduler caddy
+   ```
+6. Прокси: в `bootstrap/app.php` включено `trustProxies(at: '*')`, иначе ссылки на ресурсы будут с `http://`.
+7. Важно: `APP_KEY` нужно сохранить отдельно — им зашифрованы пароли серверов и хранилищ в базе.
