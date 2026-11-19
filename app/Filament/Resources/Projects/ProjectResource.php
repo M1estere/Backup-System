@@ -79,8 +79,16 @@ class ProjectResource extends Resource
                     ->placeholder("/var/www/user-data\n/var/www/CodeIgniter-2.1.0")
                     ->helperText('Копируются на зеркала в те же пути (например, загрузки и фреймворк, лежащие вне основной папки).')->columnSpanFull(),
                 Toggle::make('enabled')->label('Синхронизация включена')->default(true),
-                Toggle::make('sync_db')->label('Синхронизировать и базу данных')->disabled()->dehydrated(false)
-                    ->helperText('Пока недоступно: зарезервировано на будущее.'),
+                Toggle::make('sync_db')->label('Синхронизировать и базы данных')->live(),
+            ]),
+            Section::make('Базы данных на родителе')->columns(2)->visible(fn ($get) => (bool) $get('sync_db'))->schema([
+                TextInput::make('db_host')->label('Хост БД')->default('localhost'),
+                TextInput::make('db_port')->label('Порт')->numeric()->default(3306),
+                TextInput::make('db_user')->label('Пользователь БД')->required(fn ($get) => (bool) $get('sync_db')),
+                TextInput::make('db_password')->label('Пароль БД')->password()->revealable()
+                    ->dehydrated(fn ($state) => filled($state))->helperText('Пусто = без пароля / не менять'),
+                Textarea::make('db_names')->label('Базы (по одной на строку)')->rows(3)->required(fn ($get) => (bool) $get('sync_db'))->columnSpanFull()
+                    ->helperText('Каждая база на зеркале будет перезаписана данными с родителя при каждой синхронизации.'),
             ]),
             Section::make('Зеркала')->schema([
                 Repeater::make('mirrors')->relationship('mirrors')->hiddenLabel()->addActionLabel('Добавить зеркало')
@@ -90,6 +98,11 @@ class ProjectResource extends Resource
                         TextInput::make('docroot')->label('Подпапка веб-корня на зеркале')->placeholder('www')->helperText('Куда класть robots.txt (если сайт отдаётся не из корня папки).'),
                         Textarea::make('excludes')->label('Доп. исключения только для этого зеркала')->rows(2)->columnSpanFull(),
                         TextInput::make('chown')->label('Владелец файлов (user:group)')->placeholder('bitrix:bitrix')->helperText('Применяется после копирования; пусто = владелец ssh-пользователя.'),
+                        TextInput::make('db_host')->label('БД зеркала: хост')->default('localhost'),
+                        TextInput::make('db_port')->label('БД зеркала: порт')->numeric()->default(3306),
+                        TextInput::make('db_user')->label('БД зеркала: пользователь')->placeholder('root'),
+                        TextInput::make('db_password')->label('БД зеркала: пароль')->password()->revealable()->dehydrated(fn ($state) => filled($state))
+                            ->helperText('Нужно только если включена синхронизация БД; пусто = без пароля / не менять'),
                         Toggle::make('enabled')->label('Зеркало включено')->default(true)->inline(false),
                         Toggle::make('noindex')->label('Закрыть от индексации')->default(true)
                             ->helperText('robots.txt «Disallow: /» и заголовок X-Robots-Tag; восстанавливается после каждой синхронизации.'),

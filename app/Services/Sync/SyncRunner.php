@@ -99,7 +99,57 @@ class SyncRunner
         }
 
         $this->applyProtection($sync, $mirror, $dstSsh, $target);
+        if ($project->sync_db) {
+            $this->syncDatabases($sync, $project, $parent, $dst, $mirror, $srcSsh, $dstSsh, $heartbeat);
+        }
         $sync->addLog("Зеркало «{$mirror->server->name}»: готово");
+    }
+
+    /** Базы данных: дамп на родителе → панель (поток) → импорт на зеркале. Пароли передаются через env/stdin, не через аргументы. */
+    private function syncDatabases(ProjectSync $sync, Project $project, Server $parent, Server $dst, ProjectMirror $mirror, SshExecutor $srcSsh, SshExecutor $dstSsh, ?callable $heartbeat): void
+    {
+        $names = $this->lines($project->db_names);
+        if (! $names) {
+            throw new RuntimeException('Включена синхронизация БД, но не указаны базы');
+        }
+        if (! $project->db_user || ! $mirror->db_user) {
+            throw new RuntimeException('Не заданы пользователи БД (на родителе и на зеркале)');
+        }
+        $esc = fn ($v) => str_replace(['\\', '"'], ['\\\\', '\\"'], (string) $v);
+        $srcDb = ['host' => $project->db_host ?: 'localhost', 'port' => $project->db_port ?: 3306, 'username' => $project->db_user, 'password' => (string) $project->db_password];
+
+        foreach ($names as $name) {
+            if (! preg_match('/^[A-Za-z0-9_$.-]+$/', $name)) {
+                throw new RuntimeException("Недопустимое имя базы «$name»");
+            }
+            $sync->addLog("База $name: {$parent->host} → {$dst->host}");
+            $dumpScript = RemoteScript::mysqldump($srcDb, $name);
+            $dstCmd = 'umask 077; F=$(mktemp) || exit 97; trap \'rm -f "$F"\' EXIT; '
+                .'IFS= read -r U; IFS= read -r PW; '
+                .'printf \'[client]\nuser="%s"\npassword="%s"\nhost="%s"\nport=%s\n\' "$U" "$PW" '.RemoteScript::q($mirror->db_host ?: 'localhost').' '.((int) ($mirror->db_port ?: 3306)).' > "$F"; '
+                .'mariadb --defaults-extra-file="$F" -e '.RemoteScript::q('CREATE DATABASE IF NOT EXISTS `'.$name.'` CHARACTER SET utf8mb4').' || exit 96; '
+                .'gunzip | sed \'s/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g\' | mariadb --defaults-extra-file="$F" '.RemoteScript::q($name);
+
+            $script = 'set -o pipefail; { printf "%s\n%s\n" "$M_USER" "$M_PW"; SSHPASS="$P_SRC" '.$this->wrap($srcSsh->argv('sh -s')).' <<<"$SRC_SCRIPT"; } '
+                .'| SSHPASS="$P_DST" '.$this->wrap($dstSsh->argv($dstCmd))
+                .'; echo "RC=${PIPESTATUS[0]},${PIPESTATUS[1]}" >&2';
+            $p = new Process(['bash', '-c', $script], null, [
+                'P_SRC' => $parent->password, 'P_DST' => $dst->password, 'SRC_SCRIPT' => $dumpScript,
+                'M_USER' => $esc($mirror->db_user), 'M_PW' => $esc((string) $mirror->db_password),
+            ], null, (float) config('backup.max_runtime', 43200));
+            $p->start();
+            while ($p->isRunning()) {
+                $heartbeat && $heartbeat();
+                usleep(500000);
+            }
+            $err = trim($p->getErrorOutput());
+            $dumpOk = preg_match('/MYSQLDUMP_EXIT=0/', $err);
+            if (! preg_match('/RC=(\d+),(\d+)/', $err, $m) || $m[1] !== '0' || $m[2] !== '0' || ! $dumpOk) {
+                $tail = mb_substr(preg_replace('/(RC=\d+,\d+|MYSQLDUMP_EXIT=\d+)/', '', $err), -500);
+                throw new RuntimeException("база $name не перенесена (дамп/импорт: ".($m[1] ?? '?').'/'.($m[2] ?? '?').') '.trim($tail));
+            }
+            $sync->addLog("База $name: перенесена");
+        }
     }
 
     /** Копирование одной папки: источник → панель (поток) → приёмник. */

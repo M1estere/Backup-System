@@ -10,9 +10,11 @@ class Project extends Model
 {
     protected $guarded = [];
 
+    protected $hidden = ['db_password'];
+
     protected function casts(): array
     {
-        return ['enabled' => 'boolean', 'sync_db' => 'boolean'];
+        return ['enabled' => 'boolean', 'sync_db' => 'boolean', 'db_password' => 'encrypted'];
     }
 
     public function parentServer(): BelongsTo
