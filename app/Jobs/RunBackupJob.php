@@ -58,12 +58,15 @@ class RunBackupJob implements ShouldQueue
         } finally {
             $lock->release();
         }
+        app(\App\Services\Notify\Notifier::class)->runFinished($run->fresh());
     }
 
     public function failed(Throwable $e): void
     {
-        Run::find($this->runId)?->update([
+        $run = Run::find($this->runId);
+        $run?->update([
             'status' => 'failed', 'finished_at' => now(), 'error' => mb_substr($e->getMessage(), 0, 1000),
         ]);
+        $run && app(\App\Services\Notify\Notifier::class)->runFinished($run->fresh());
     }
 }

@@ -12,3 +12,4 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('backup:reap')->everyMinute()->withoutOverlapping();
 Schedule::command('projects:sync-due')->everyMinute()->withoutOverlapping();
 Schedule::command('backup:schedule-due')->everyMinute()->withoutOverlapping();
+Schedule::command('notify:digest')->everyMinute()->withoutOverlapping();

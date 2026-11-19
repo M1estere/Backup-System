@@ -37,5 +37,6 @@ class BackupReap extends Command
         $run->targets()->whereIn('status', ['pending', 'running'])->update(['status' => 'failed', 'error' => $why]);
         $run->log($why, 'error');
         $run->update(['status' => 'failed', 'finished_at' => now(), 'error' => $why]);
+        app(\App\Services\Notify\Notifier::class)->runFinished($run->fresh());
     }
 }

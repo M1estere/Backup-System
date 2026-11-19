@@ -43,10 +43,13 @@ class RunProjectSyncJob implements ShouldQueue
         } finally {
             $lock->release();
         }
+        app(\App\Services\Notify\Notifier::class)->syncFinished($sync->fresh());
     }
 
     public function failed(Throwable $e): void
     {
-        ProjectSync::find($this->syncId)?->update(['status' => 'failed', 'finished_at' => now(), 'error' => mb_substr($e->getMessage(), 0, 1000)]);
+        $sync = ProjectSync::find($this->syncId);
+        $sync?->update(['status' => 'failed', 'finished_at' => now(), 'error' => mb_substr($e->getMessage(), 0, 1000)]);
+        $sync && app(\App\Services\Notify\Notifier::class)->syncFinished($sync->fresh());
     }
 }
