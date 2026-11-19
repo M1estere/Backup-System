@@ -47,12 +47,5 @@
             </div>
         </x-filament::section>
 
-        <x-filament::section heading="Служебные процессы" description="Работают постоянно в фоне, настраивать не нужно.">
-            <ul style="font-size:.875rem;line-height:1.7">
-                @foreach ($data['system'] as $s)
-                    <li><strong>{{ $s['name'] }}</strong> — {{ $s['every'] }}: {{ $s['what'] }}</li>
-                @endforeach
-            </ul>
-        </x-filament::section>
     </div>
 </x-filament-panels::page>

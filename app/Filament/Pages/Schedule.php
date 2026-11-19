@@ -55,7 +55,7 @@ class Schedule extends Page
         ] : null;
     }
 
-    /** @return array{rows: list<array>, system: list<array>} */
+    /** @return array{rows: list<array>} */
     public function getRows(): array
     {
         $rows = [];
@@ -101,12 +101,6 @@ class Schedule extends Page
 
         return [
             'rows' => $rows,
-            'system' => [
-                ['name' => 'backup:schedule-due', 'every' => 'каждую минуту', 'what' => 'Запускает бэкапы, у которых наступило время'],
-                ['name' => 'projects:sync-due', 'every' => 'каждую минуту', 'what' => 'Запускает зеркалирование проектов по времени'],
-                ['name' => 'backup:reap', 'every' => 'каждую минуту', 'what' => 'Помечает зависшие запуски бэкапов как неудачные'],
-                ['name' => 'Ретенция', 'every' => 'после каждого успешного бэкапа', 'what' => 'Удаляет старые копии сверх 7/4/6 (дневных/недельных/месячных)'],
-            ],
         ];
     }
 }
