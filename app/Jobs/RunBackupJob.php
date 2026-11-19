@@ -48,6 +48,13 @@ class RunBackupJob implements ShouldQueue
         try {
             // пульс продлевает блокировку: если воркер упадёт, она истечёт сама
             $runner->execute($run, fn () => $lock->refresh(900));
+            if (in_array($run->fresh()->status, ['success', 'partial'], true)) {
+                try {
+                    app(\App\Services\Backup\RetentionPruner::class)->prune($run->backupJob);
+                } catch (Throwable $e) {
+                    $run->log('Ретенция: ошибка — '.$e->getMessage(), 'warning');
+                }
+            }
         } finally {
             $lock->release();
         }

@@ -75,6 +75,9 @@ class ProjectResource extends Resource
                 Textarea::make('excludes')->label('Не копировать (по одному шаблону на строку)')->rows(3)
                     ->placeholder("upload\nbitrix/cache\nbitrix/php_interface/dbconn.php")
                     ->helperText('Общие исключения для всех зеркал: кэш, загрузки, конфиги с реквизитами БД.')->columnSpanFull(),
+                Textarea::make('extra_paths')->label('Дополнительные папки (по одной на строку, абсолютные пути)')->rows(2)
+                    ->placeholder("/var/www/user-data\n/var/www/CodeIgniter-2.1.0")
+                    ->helperText('Копируются на зеркала в те же пути (например, загрузки и фреймворк, лежащие вне основной папки).')->columnSpanFull(),
                 Toggle::make('enabled')->label('Синхронизация включена')->default(true),
                 Toggle::make('sync_db')->label('Синхронизировать и базу данных')->disabled()->dehydrated(false)
                     ->helperText('Пока недоступно: зарезервировано на будущее.'),
@@ -84,6 +87,7 @@ class ProjectResource extends Resource
                     ->itemLabel(fn (array $state) => $state['target_path'] ?? 'Зеркало')->collapsible()->columns(2)->schema([
                         Select::make('server_id')->label('Сервер-зеркало')->relationship('server', 'name')->required()->searchable()->preload(),
                         TextInput::make('target_path')->label('Папка на зеркале')->required()->maxLength(500),
+                        TextInput::make('docroot')->label('Подпапка веб-корня на зеркале')->placeholder('www')->helperText('Куда класть robots.txt (если сайт отдаётся не из корня папки).'),
                         Textarea::make('excludes')->label('Доп. исключения только для этого зеркала')->rows(2)->columnSpanFull(),
                         TextInput::make('chown')->label('Владелец файлов (user:group)')->placeholder('bitrix:bitrix')->helperText('Применяется после копирования; пусто = владелец ssh-пользователя.'),
                         Toggle::make('enabled')->label('Зеркало включено')->default(true)->inline(false),

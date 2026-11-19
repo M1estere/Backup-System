@@ -18,7 +18,7 @@ class ProjectsSyncDue extends Command
         $now = now();
         foreach (Project::where('enabled', true)->get() as $p) {
             $due = $now->copy()->setTimeFromTimeString($p->sync_at);
-            if ($now->lt($due) || $now->diffInMinutes($due) > 59) {
+            if ($now->lt($due) || $due->diffInMinutes($now) > 59) {
                 continue; // окно запуска: час после назначенного времени (если панель была недоступна)
             }
             if ($p->syncs()->where('trigger', 'schedule')->where('created_at', '>=', $due)->exists()) {

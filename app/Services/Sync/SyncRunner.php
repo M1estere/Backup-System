@@ -82,17 +82,35 @@ class SyncRunner
             throw new RuntimeException('Зеркало совпадает с источником (тот же сервер и путь)');
         }
         $dst = $this->check($sync, $mirror->server, 'зеркало');
-        $sync->addLog("Копирование {$parent->host}:$source → {$dst->host}:$target");
-
         $excludes = array_merge($this->lines($project->excludes), $this->lines($mirror->excludes));
-        $ex = implode(' ', array_map(fn ($e) => '--exclude='.RemoteScript::q($e), $excludes));
+        $srcSsh = new SshExecutor($parent);
+        $dstSsh = new SshExecutor($dst);
 
+        $this->copyPath($sync, $parent, $dst, $srcSsh, $dstSsh, $source, $target, $excludes, $heartbeat);
+        foreach ($this->lines($project->extra_paths) as $extra) {
+            $extra = rtrim($extra, '/');
+            if ($extra === '' || ! str_starts_with($extra, '/')) {
+                throw new RuntimeException("Дополнительная папка «$extra» должна быть абсолютным путём");
+            }
+            $this->copyPath($sync, $parent, $dst, $srcSsh, $dstSsh, $extra, $extra, [], $heartbeat);
+            if ($mirror->chown && preg_match('/^[a-z0-9_.-]+(:[a-z0-9_.-]+)?$/i', $mirror->chown)) {
+                $dstSsh->run('chown -R '.$mirror->chown.' '.RemoteScript::q($extra), 600);
+            }
+        }
+
+        $this->applyProtection($sync, $mirror, $dstSsh, $target);
+        $sync->addLog("Зеркало «{$mirror->server->name}»: готово");
+    }
+
+    /** Копирование одной папки: источник → панель (поток) → приёмник. */
+    private function copyPath(ProjectSync $sync, Server $parent, Server $dst, SshExecutor $srcSsh, SshExecutor $dstSsh, string $source, string $target, array $excludes, ?callable $heartbeat): void
+    {
+        $sync->addLog("Копирование {$parent->host}:$source → {$dst->host}:$target");
+        $ex = implode(' ', array_map(fn ($e) => '--exclude='.RemoteScript::q($e), $excludes));
         $srcCmd = 'cd '.RemoteScript::q($source).' || exit 98; '
             .'( tar -czf - '.$ex.' . ; rc=$?; [ $rc -eq 1 ] && rc=0; exit $rc )';
         $dstCmd = 'mkdir -p '.RemoteScript::q($target).' && tar -xzf - --no-same-owner -C '.RemoteScript::q($target);
 
-        $srcSsh = new SshExecutor($parent);
-        $dstSsh = new SshExecutor($dst);
         $script = 'set -o pipefail; SSHPASS="$P_SRC" '.$this->wrap($srcSsh->argv($srcCmd))
             .' | SSHPASS="$P_DST" '.$this->wrap($dstSsh->argv($dstCmd))
             .'; echo "RC=${PIPESTATUS[0]},${PIPESTATUS[1]}" >&2';
@@ -106,12 +124,9 @@ class SyncRunner
         $err = trim($p->getErrorOutput());
         if (! preg_match('/RC=(\d+),(\d+)/', $err, $m) || $m[1] !== '0' || $m[2] !== '0') {
             $tail = mb_substr(preg_replace('/RC=\d+,\d+/', '', $err), -600);
-            throw new RuntimeException('копирование не удалось (источник/приёмник: '.($m[1] ?? '?').'/'.($m[2] ?? '?').') '.trim($tail));
+            throw new RuntimeException("копирование $source не удалось (источник/приёмник: ".($m[1] ?? '?').'/'.($m[2] ?? '?').') '.trim($tail));
         }
-        $sync->addLog('Файлы переданы');
-
-        $this->applyProtection($sync, $mirror, $dstSsh, $target);
-        $sync->addLog("Зеркало «{$mirror->server->name}»: готово");
+        $sync->addLog("Файлы переданы: $source");
     }
 
     /** Basic auth и запрет индексации: управляемый блок в .htaccess + robots.txt (после каждой синхронизации заново). */
@@ -150,11 +165,17 @@ class SyncRunner
         } else {
             $s .= "rm -f .htpasswd-backup-panel\n";
         }
+        $docroot = trim((string) $mirror->docroot, '/');
+        if ($docroot !== '' && ! preg_match('#^[A-Za-z0-9_./-]+$#', $docroot)) {
+            throw new RuntimeException('Некорректная подпапка веб-корня');
+        }
+        $s .= 'cd '.$q($target.($docroot !== '' ? '/'.$docroot : ''))." || exit 97\n";
         if ($mirror->noindex) {
             $s .= "printf 'User-agent: *\\nDisallow: /\\n# managed by backup-panel\\n' > robots.txt\n";
         } else {
             $s .= "if [ -f robots.txt ] && grep -q 'managed by backup-panel' robots.txt; then rm -f robots.txt; fi\n";
         }
+        $s .= 'cd '.$q($target)." || exit 98\n";
         if ($mirror->chown) {
             if (! preg_match('/^[a-z0-9_.-]+(:[a-z0-9_.-]+)?$/i', $mirror->chown)) {
                 throw new RuntimeException('Некорректное значение владельца (user:group)');
