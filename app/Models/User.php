@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -25,6 +26,17 @@ class User extends Authenticatable implements FilamentUser
         return true;
     }
 
+    public function isSuperuser(): bool
+    {
+        return $this->role === UserRole::Superuser;
+    }
+
+    /** Можно ли удалить: нельзя последнего суперпользователя. */
+    public function isLastSuperuser(): bool
+    {
+        return $this->isSuperuser() && static::where('role', UserRole::Superuser->value)->count() <= 1;
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -35,6 +47,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
     }
 }
