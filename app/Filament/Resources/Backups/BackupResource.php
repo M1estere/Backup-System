@@ -31,6 +31,9 @@ class BackupResource extends Resource
 
     protected static ?int $navigationSort = 35;
 
+    /** id сервера записи: run_targets -> runs -> backup_jobs. */
+    private const SERVER_ID_SQL = '(select backup_jobs.server_id from runs join backup_jobs on backup_jobs.id = runs.backup_job_id where runs.id = run_targets.run_id)';
+
     public static function canCreate(): bool
     {
         return false;
@@ -74,6 +77,13 @@ class BackupResource extends Resource
             ])
             ->groups([
                 \Filament\Tables\Grouping\Group::make('storage.name')->label('Хранилище')->collapsible(),
+                // Сервер — через запуск и задание, поэтому группировка по подзапросу.
+                \Filament\Tables\Grouping\Group::make('server')->label('Сервер')->collapsible()
+                    ->getKeyFromRecordUsing(fn (RunTarget $record) => (string) $record->run?->backupJob?->server_id)
+                    ->getTitleFromRecordUsing(fn (RunTarget $record) => $record->run?->backupJob?->server?->name ?? 'без сервера')
+                    ->groupQueryUsing(fn (\Illuminate\Database\Query\Builder $query) => $query->groupByRaw(self::SERVER_ID_SQL))
+                    ->orderQueryUsing(fn (Builder $query, string $direction) => $query->orderByRaw(self::SERVER_ID_SQL.' '.($direction === 'desc' ? 'desc' : 'asc')))
+                    ->scopeQueryByKeyUsing(fn (Builder $query, ?string $key) => $query->whereRaw(self::SERVER_ID_SQL.' = ?', [$key])),
             ])
             ->recordActions([
                 Action::make('files')->label('Файлы')->icon('heroicon-o-document-text')

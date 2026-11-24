@@ -56,6 +56,8 @@ class BackupListTest extends TestCase
             'objects' => [['key' => 'job/a.tar.gz', 'size' => 7, 'sha256' => 'x']]]);
         $t2 = RunTarget::create(['run_id' => $r2->id, 'storage_id' => $st->id, 'status' => 'success', 'size_bytes' => 1]);
 
+        Livewire::test(ListBackups::class)->set('tableGrouping', 'server')
+            ->assertSee('Сервер-1')->assertSee('Сервер-2');
         Livewire::test(ListBackups::class)->assertSee('5 МБ')->assertSee('дневная')
             ->filterTable('server', $s2->id)->assertCanSeeTableRecords([$t2])->assertCanNotSeeTableRecords([$t1]);
 
