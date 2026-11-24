@@ -28,6 +28,8 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
+    environment:
+      PANEL_HOST: ${PANEL_HOST:?задайте PANEL_HOST в .env.compose (IP или домен панели)}
     ports: ["80:80", "443:443"]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

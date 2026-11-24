@@ -270,7 +270,7 @@ docker compose run --rm -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: app php 
 
 1. Docker + compose, клонировать репозиторий в `/opt/backup-panel`.
 2. База: на хосте (MariaDB/MySQL), пользователь `backup` с доступом из сети Docker (`172.16.0.0/12`); контейнеры подключаются к `host.docker.internal`.
-3. `.env` — из `.env.example` (`APP_ENV=production`, `APP_DEBUG=false`, `APP_URL`, `DB_HOST=host.docker.internal`, `DB_PASSWORD`, `APP_KEY`); `.env.compose` — одна строка `DB_PASSWORD=...`.
+3. `.env` — из `.env.example` (`APP_ENV=production`, `APP_DEBUG=false`, `APP_URL`, `DB_HOST=host.docker.internal`, `DB_PASSWORD`, `APP_KEY`); `.env.compose` — две строки: `DB_PASSWORD=...` и `PANEL_HOST=` (IP или домен панели; на него Caddy выпускает сертификат).
 4. `Caddyfile`: заменить IP на свой домен (Let's Encrypt выпустится сам) или оставить IP (самоподписанный сертификат).
 5. Запуск:
    ```bash
