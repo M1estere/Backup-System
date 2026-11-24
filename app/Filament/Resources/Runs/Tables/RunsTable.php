@@ -34,12 +34,12 @@ class RunsTable
                 TextColumn::make('id')->label('№')->sortable(),
                 TextColumn::make('backupJob.name')->label('Задание')->searchable(),
                 TextColumn::make('tier')->label('Тип')->badge()
-                    ->formatStateUsing(fn ($s) => ['daily' => 'дневной', 'weekly' => 'недельный', 'monthly' => 'месячный', 'manual' => 'ручной'][$s] ?? $s),
+                    ->formatStateUsing(fn ($state) => ['daily' => 'дневной', 'weekly' => 'недельный', 'monthly' => 'месячный', 'manual' => 'ручной'][$state] ?? $state),
                 TextColumn::make('status')->label('Статус')->badge()
-                    ->formatStateUsing(fn ($s) => self::statusLabel($s))
-                    ->color(fn ($s) => self::statusColor($s)),
+                    ->formatStateUsing(fn ($state) => self::statusLabel($state))
+                    ->color(fn ($state) => self::statusColor($state)),
                 TextColumn::make('trigger')->label('Запуск')
-                    ->formatStateUsing(fn ($s) => $s === 'manual' ? 'вручную' : 'по расписанию'),
+                    ->formatStateUsing(fn ($state) => $state === 'manual' ? 'вручную' : 'по расписанию'),
                 TextColumn::make('started_at')->label('Начало')->dateTime('d.m.Y H:i')->sortable(),
                 TextColumn::make('duration')->label('Длительность')
                     ->state(fn (Run $r) => $r->started_at && $r->finished_at

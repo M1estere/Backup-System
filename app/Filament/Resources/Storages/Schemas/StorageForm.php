@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Storages\Schemas;
 
+use App\Filament\Support\CreatedByInfo;
 use App\Models\Storage;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -65,6 +66,7 @@ class StorageForm
                 ]),
 
             Textarea::make('notes')->label('Заметки')->rows(2)->columnSpanFull(),
+            CreatedByInfo::make(),
         ]);
     }
 }

@@ -10,6 +10,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Table;
 
 class StoragesTable
@@ -17,10 +18,12 @@ class StoragesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withSum(['runTargets as used_bytes' => fn ($q) => $q->where('status', 'success')], 'size_bytes'))
             ->columns([
                 TextColumn::make('name')->label('Название')->searchable()->sortable(),
                 TextColumn::make('type')->label('Тип')->badge()
                     ->formatStateUsing(fn ($state) => Storage::TYPES[$state] ?? $state),
+                ViewColumn::make('usage')->label('Занято')->view('filament.tables.storage-usage'),
                 TextColumn::make('status')->label('Статус')->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {'ok' => 'работает', 'error' => 'ошибка', default => 'не проверялось'})
                     ->color(fn ($state) => match ($state) {'ok' => 'success', 'error' => 'danger', default => 'gray'})

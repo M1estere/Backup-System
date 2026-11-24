@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BackupJobs\Schemas;
 
+use App\Filament\Support\CreatedByInfo;
 use App\Models\Storage;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -90,6 +91,7 @@ class BackupJobForm
                             TextInput::make('keep_monthly')->label('Месячных')->numeric()->default(6)->minValue(0)->required(),
                         ]),
                 ]),
+            CreatedByInfo::make(),
         ]);
     }
 }

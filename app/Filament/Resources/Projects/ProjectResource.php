@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Projects;
 
+use App\Filament\Support\CreatedByInfo;
 use App\Filament\Resources\ProjectSyncs\ProjectSyncResource;
 use App\Filament\Resources\Projects\Pages\CreateProject;
 use App\Filament\Resources\Projects\Pages\EditProject;
@@ -115,6 +116,7 @@ class ProjectResource extends Resource
                             ->helperText('Пустое поле при редактировании = не менять'),
                     ]),
             ]),
+            CreatedByInfo::make(),
         ]);
     }
 

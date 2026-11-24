@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TracksCreator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Storage extends Model
 {
@@ -16,6 +18,8 @@ class Storage extends Model
         self::TYPE_SFTP => 'Windows / SFTP',
         self::TYPE_LOCAL => 'Локальная папка',
     ];
+
+    use TracksCreator;
 
     protected $guarded = [];
 
@@ -33,6 +37,11 @@ class Storage extends Model
             'config' => 'encrypted:array',
             'last_checked_at' => 'datetime',
         ];
+    }
+
+    public function runTargets(): HasMany
+    {
+        return $this->hasMany(RunTarget::class);
     }
 
     public function backupJobs(): BelongsToMany

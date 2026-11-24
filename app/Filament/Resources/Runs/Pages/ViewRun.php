@@ -23,8 +23,8 @@ class ViewRun extends ViewRecord
             Section::make('Запуск')->columns(4)->schema([
                 TextEntry::make('backupJob.name')->label('Задание'),
                 TextEntry::make('status')->label('Статус')->badge()
-                    ->formatStateUsing(fn ($s) => RunsTable::statusLabel($s))
-                    ->color(fn ($s) => RunsTable::statusColor($s)),
+                    ->formatStateUsing(fn ($state) => RunsTable::statusLabel($state))
+                    ->color(fn ($state) => RunsTable::statusColor($state)),
                 TextEntry::make('started_at')->label('Начало')->dateTime('d.m.Y H:i:s'),
                 TextEntry::make('finished_at')->label('Конец')->dateTime('d.m.Y H:i:s')->placeholder('—'),
                 TextEntry::make('error')->label('Ошибка')->color('danger')->columnSpanFull()->visible(fn (Run $r) => filled($r->error)),
@@ -33,9 +33,9 @@ class ViewRun extends ViewRecord
                 RepeatableEntry::make('targets')->hiddenLabel()->columns(4)->schema([
                     TextEntry::make('storage.name')->label('Хранилище'),
                     TextEntry::make('status')->label('Статус')->badge()
-                        ->formatStateUsing(fn ($s) => ['pending' => 'ожидает', 'running' => 'идёт', 'success' => 'успех', 'failed' => 'ошибка'][$s] ?? $s)
-                        ->color(fn ($s) => ['success' => 'success', 'failed' => 'danger', 'running' => 'info'][$s] ?? 'gray'),
-                    TextEntry::make('size_bytes')->label('Размер')->formatStateUsing(fn ($s) => RunsTable::bytes((int) $s)),
+                        ->formatStateUsing(fn ($state) => ['pending' => 'ожидает', 'running' => 'идёт', 'success' => 'успех', 'failed' => 'ошибка'][$state] ?? $state)
+                        ->color(fn ($state) => ['success' => 'success', 'failed' => 'danger', 'running' => 'info'][$state] ?? 'gray'),
+                    TextEntry::make('size_bytes')->label('Размер')->formatStateUsing(fn ($state) => RunsTable::bytes((int) $state)),
                     TextEntry::make('error')->label('Ошибка')->color('danger')->placeholder('—'),
                 ]),
             ]),

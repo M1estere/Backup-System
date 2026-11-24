@@ -41,7 +41,7 @@ class ProjectSyncResource extends Resource
             Section::make('Синхронизация')->columns(4)->schema([
                 TextEntry::make('project.name')->label('Проект'),
                 TextEntry::make('status')->label('Статус')->badge()
-                    ->formatStateUsing(fn ($s) => RunsTable::statusLabel($s))->color(fn ($s) => RunsTable::statusColor($s)),
+                    ->formatStateUsing(fn ($state) => RunsTable::statusLabel($state))->color(fn ($state) => RunsTable::statusColor($state)),
                 TextEntry::make('started_at')->label('Начало')->dateTime('d.m.Y H:i:s')->placeholder('—'),
                 TextEntry::make('finished_at')->label('Конец')->dateTime('d.m.Y H:i:s')->placeholder('—'),
                 TextEntry::make('error')->label('Ошибка')->color('danger')->columnSpanFull()->visible(fn (ProjectSync $r) => filled($r->error)),
@@ -61,8 +61,8 @@ class ProjectSyncResource extends Resource
                 TextColumn::make('id')->label('№')->sortable(),
                 TextColumn::make('project.name')->label('Проект')->searchable(),
                 TextColumn::make('status')->label('Статус')->badge()
-                    ->formatStateUsing(fn ($s) => RunsTable::statusLabel($s))->color(fn ($s) => RunsTable::statusColor($s)),
-                TextColumn::make('trigger')->label('Запуск')->formatStateUsing(fn ($s) => $s === 'manual' ? 'вручную' : 'по расписанию'),
+                    ->formatStateUsing(fn ($state) => RunsTable::statusLabel($state))->color(fn ($state) => RunsTable::statusColor($state)),
+                TextColumn::make('trigger')->label('Запуск')->formatStateUsing(fn ($state) => $state === 'manual' ? 'вручную' : 'по расписанию'),
                 TextColumn::make('started_at')->label('Начало')->dateTime('d.m.Y H:i')->sortable(),
                 TextColumn::make('finished_at')->label('Конец')->dateTime('d.m.Y H:i'),
             ])

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\TracksCreator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Server extends Model
 {
+    use TracksCreator;
+
     protected $guarded = [];
 
     protected $hidden = ['password'];

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Servers\Schemas;
 
+use App\Filament\Support\CreatedByInfo;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
@@ -25,6 +26,7 @@ class ServerForm
                     ->columnSpanFull(),
                 Textarea::make('notes')->label('Заметки')->rows(2)->columnSpanFull(),
             ]),
+            CreatedByInfo::make(),
         ]);
     }
 }
